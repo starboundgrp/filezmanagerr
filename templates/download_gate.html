@@ -111,6 +111,14 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const video = document.querySelector('video');
+            if (video) {
+                video.play().catch(error => {
+                    // Autoplay was prevented. This is common.
+                    // The user can still play it manually with the controls.
+                    console.log("Video autoplay was prevented by the browser.");
+                });
+            }
             const countdownElement = document.getElementById('countdown');
             const downloadLink = document.getElementById('download-link');
             let countdown = 10; // seconds
