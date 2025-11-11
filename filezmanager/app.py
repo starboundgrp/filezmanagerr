@@ -8,14 +8,19 @@ app = Flask(__name__)
 # --- Configuration ---
 # IMPORTANT: Change this secret key!
 app.secret_key = 'your-very-secret-key' 
-app.config['UPLOAD_FOLDER'] = 'uploads'
+# Use /tmp for Vercel's writable directory
+app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
 
 # --- Securely load credentials from Environment Variables ---
 # Fallback values ('admin', 'admin123') are for easy local development.
-app.config['ADMIN_USERNAME'] = os.environ.get('ADMIN_USERNAME', 'briasfilesstar12')
-app.config['ADMIN_PASSWORD'] = os.environ.get('ADMIN_PASSWORD', 'i8?%03\rE,w4FA3^Wy4')
+app.config['ADMIN_USERNAME'] = os.environ.get('ADMIN_USERNAME', 'adbriasfilesstar12')
+app.config['ADMIN_PASSWORD'] = os.environ.get('ADMIN_PASSWORD', 'admi8?%03\rE,w4FA3^Wy4')
 
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+@app.before_first_request
+def create_upload_directory():
+    """Ensures the upload folder exists before the first request is handled."""
+    if not os.path.exists(app.config['UPLOAD_FOLDER']):
+        os.makedirs(app.config['UPLOAD_FOLDER'])
 
 # --- Helper Functions ---
 def is_user_logged_in():
