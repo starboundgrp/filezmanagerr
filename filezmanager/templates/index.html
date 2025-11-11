@@ -86,7 +86,8 @@
     <div class="container">
         <h1>Available Files</h1>
         <ul class="file-list" id="file-list">
-            <!-- Files will be dynamically inserted here by JavaScript -->
+            <!-- Files will be loaded here by JavaScript -->
+            <li class="file-item">Loading files...</li>
         </ul>
     </div>
 
@@ -95,8 +96,15 @@
             const fileList = document.getElementById('file-list');
 
             fetch('/api/files')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(files => {
+                    fileList.innerHTML = ''; // Clear the "Loading..." message
+
                     if (files.length === 0) {
                         fileList.innerHTML = '<li class="file-item">No files available for download.</li>';
                         return;
@@ -106,17 +114,18 @@
                         const listItem = document.createElement('li');
                         listItem.className = 'file-item';
 
+                        // Note: The API returns file.name and file.size
                         listItem.innerHTML = `
-                            <div class="file-info">
-                                <span class="file-name">${file.name}</span>
-                                <span class="file-size">${file.size}</span>
-                            </div>
-                            <a href="/prepare-download/${file.name}" class="download-btn">Download</a>
+                            <span class="file-name">${file.name}</span>
+                            <a href="/resource/${file.name}" class="download-btn">View Resource</a>
                         `;
                         fileList.appendChild(listItem);
                     });
                 })
-                .catch(error => console.error('Error fetching files:', error));
+                .catch(error => {
+                    fileList.innerHTML = '<li class="file-item" style="color: #ef4444;">Error loading files. Please try again later.</li>';
+                    console.error('Error fetching files:', error);
+                });
         });
     </script>
 </body>
