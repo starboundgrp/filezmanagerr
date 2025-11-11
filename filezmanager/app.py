@@ -13,25 +13,22 @@ def create_app():
     app.config['ADMIN_USERNAME'] = os.environ.get('ADMIN_USERNAME', 'adbriasfilesstar12')
     app.config['ADMIN_PASSWORD'] = os.environ.get('ADMIN_PASSWORD', 'admi8?%03E,w4FA3^Wy4')
 
-    @app.route('/favicon.ico')
-@app.route('/favicon.png')
-def no_favicon():
-    # Return a 204 No Content response to suppress the browser error
-    return '', 204
     # Use a context processor to ensure the upload directory exists
     @app.before_request
     def before_request_func():
         if not os.path.exists(app.config['UPLOAD_FOLDER']):
             os.makedirs(app.config['UPLOAD_FOLDER'])
 
+    # --- Route to handle favicon requests and prevent 404 errors ---
+    @app.route('/favicon.ico')
+    @app.route('/favicon.png')
+    def favicon():
+        """Sends a 204 No Content response to favicon requests."""
+        return '', 204
+
     # --- Helper Functions ---
     def is_user_logged_in():
         return session.get('logged_in')
-
-    @app.route('/favicon.ico')
-@app.route('/favicon.png')
-def favicon():
-    return '', 204
 
     # --- Public Routes ---
     @app.route('/')
@@ -110,16 +107,19 @@ def favicon():
     def list_files():
         """Returns a JSON list of files in the upload folder."""
         files = []
-        for filename in os.listdir(app.config['UPLOAD_FOLDER']):
-            if os.path.isfile(os.path.join(app.config['UPLOAD_FOLDER'], filename)) and not filename.startswith('.'):
-                path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                size_bytes = os.path.getsize(path)
-                # Format size to be human-readable
-                if size_bytes < 1024 * 1024:
-                    size = f"{size_bytes / 1024:.2f} KB"
-                else:
-                    size = f"{size_bytes / (1024 * 1024):.2f} MB"
-                files.append({'name': filename, 'size': size})
+        upload_folder = app.config['UPLOAD_FOLDER']
+        # Ensure the directory exists before trying to list its contents
+        if os.path.exists(upload_folder):
+            for filename in os.listdir(upload_folder):
+                if os.path.isfile(os.path.join(upload_folder, filename)) and not filename.startswith('.'):
+                    path = os.path.join(upload_folder, filename)
+                    size_bytes = os.path.getsize(path)
+                    # Format size to be human-readable
+                    if size_bytes < 1024 * 1024:
+                        size = f"{size_bytes / 1024:.2f} KB"
+                    else:
+                        size = f"{size_bytes / (1024 * 1024):.2f} MB"
+                    files.append({'name': filename, 'size': size})
         return jsonify(files)
 
     @app.route('/api/upload', methods=['POST'])
