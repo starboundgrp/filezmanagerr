@@ -3,28 +3,32 @@ from flask import Flask, render_template, request, redirect, url_for, session, s
 import random
 from werkzeug.utils import secure_filename
 
-app = Flask(__name__)
-
 # --- Configuration ---
 # IMPORTANT: Change this secret key!
 app.secret_key = 'your-very-secret-key' 
 # Use /tmp for Vercel's writable directory
 app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
 
-# --- Securely load credentials from Environment Variables ---
-# Fallback values ('admin', 'admin123') are for easy local development.
-app.config['ADMIN_USERNAME'] = os.environ.get('ADMIN_USERNAME', 'adbriasfilesstar12')
-app.config['ADMIN_PASSWORD'] = os.environ.get('ADMIN_PASSWORD', 'admi8?%03E,w4FA3^Wy4')
+def create_app():
+    """Creates and configures the Flask app."""
+    app = Flask(__name__)
+    app.secret_key = 'your-very-secret-key' 
+    app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
 
-@app.before_first_request
-def create_upload_directory():
-    """Ensures the upload folder exists before the first request is handled."""
-    if not os.path.exists(app.config['UPLOAD_FOLDER']):
-        os.makedirs(app.config['UPLOAD_FOLDER'])
+    # --- Securely load credentials from Environment Variables ---
+    app.config['ADMIN_USERNAME'] = os.environ.get('ADMIN_USERNAME', 'adbriasfilesstar12')
+    app.config['ADMIN_PASSWORD'] = os.environ.get('ADMIN_PASSWORD', 'admi8?%03E,w4FA3^Wy4')
 
-# --- Helper Functions ---
-def is_user_logged_in():
-    return session.get('logged_in')
+    # Use a context processor to ensure the upload directory exists
+    @app.before_request
+    def before_request_func():
+        if not os.path.exists(app.config['UPLOAD_FOLDER']):
+            os.makedirs(app.config['UPLOAD_FOLDER'])
+    
+    return app
+
+app = create_app()
+
 
 # --- Public Routes ---
 
@@ -34,6 +38,10 @@ def index():
     upload_folder = app.config['UPLOAD_FOLDER']
     files = [f for f in os.listdir(upload_folder) if os.path.isfile(os.path.join(upload_folder, f)) and not f.startswith('.')]
     return render_template('index.html', files=files)
+
+# --- Helper Functions ---
+def is_user_logged_in():
+    return session.get('logged_in')
 
 @app.route('/resource/<filename>')
 def resource_page(filename):
