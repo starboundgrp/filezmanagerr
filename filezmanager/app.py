@@ -13,6 +13,11 @@ def create_app():
     app.config['ADMIN_USERNAME'] = os.environ.get('ADMIN_USERNAME', 'adbriasfilesstar12')
     app.config['ADMIN_PASSWORD'] = os.environ.get('ADMIN_PASSWORD', 'admi8?%03E,w4FA3^Wy4')
 
+    @app.route('/favicon.ico')
+@app.route('/favicon.png')
+def no_favicon():
+    # Return a 204 No Content response to suppress the browser error
+    return '', 204
     # Use a context processor to ensure the upload directory exists
     @app.before_request
     def before_request_func():
