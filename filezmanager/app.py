@@ -2,7 +2,9 @@ import os
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, abort
 import random
 from werkzeug.utils import secure_filename
-from vercel_kv import kv
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
 app = Flask(__name__)
 
@@ -11,6 +13,13 @@ app.secret_key = os.environ.get('SECRET_KEY', 'your-very-secret-key')
 app.config['ADMIN_USERNAME'] = os.environ.get('ADMIN_USERNAME', 'adbriasfilesstar12')
 app.config['ADMIN_PASSWORD'] = os.environ.get('ADMIN_PASSWORD', 'admi8?%03E,w4FA3^Wy4')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limit uploads to 16 MB
+
+# --- Cloudinary Configuration ---
+cloudinary.config(
+    cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    api_key = os.environ.get('CLOUDINARY_API_KEY'),
+    api_secret = os.environ.get('CLOUDINARY_API_SECRET')
+)
 
 # --- Helper Functions & Initial Setup ---
 def is_user_logged_in():
@@ -41,8 +50,11 @@ def resource_page(filename):
 @app.route('/prepare-download/<filename>')
 def prepare_download(filename):
     """Serves the intermediate 'ad gate' page."""
-    # Check if the file link exists in our KV store
-    if not kv.exists(secure_filename(filename)):
+    try:
+        # Check if the file exists in Cloudinary before showing the gate
+        cloudinary.api.resource(os.path.splitext(secure_filename(filename))[0], resource_type="raw")
+    except cloudinary.exceptions.NotFound:
+        # If Cloudinary says the file doesn't exist, show a 404 error
         abort(404)
 
     # --- Select a random video ---
@@ -64,12 +76,15 @@ def prepare_download(filename):
 @app.route('/download/<filename>')
 def download_file(filename):
     """Redirects to the Cloudinary URL for the file to start the download."""
-    # Get the external URL from the KV store and redirect the user
-    download_url = kv.get(secure_filename(filename))
-    if download_url:
+    try:
+        # Get the file's URL from Cloudinary
+        # The 'fl_attachment' flag tells the browser to download the file instead of displaying it
+        public_id = os.path.splitext(secure_filename(filename))[0]
+        download_url = cloudinary.utils.cloudinary_url(public_id, resource_type="raw", flags="attachment")[0]
         return redirect(download_url)
-    else:
+    except Exception:
         abort(404)
+
 # --- Admin & Auth Routes ---
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
@@ -100,31 +115,41 @@ def list_files():
     """Returns a JSON list of files in the upload folder."""
     files = []
     try:
-        # Get all keys (filenames) from the KV store
-        filenames = kv.keys('*')
-        for filename in filenames:
-            # For simplicity, we won't show file size as we don't know it.
-            files.append({'name': filename, 'size': 'N/A'})
+        # Fetch all "raw" files from Cloudinary
+        resources = cloudinary.api.resources(resource_type="raw", max_results=500).get('resources', [])
+        for resource in resources:
+            size_bytes = resource.get('bytes', 0)
+            if size_bytes < 1024 * 1024:
+                size = f"{size_bytes / 1024:.2f} KB"
+            else:
+                size = f"{size_bytes / (1024 * 1024):.2f} MB"
+            # The public_id is the unique identifier, which we use as the filename
+            files.append({'name': resource['public_id'] + '.' + resource.get('format', ''), 'size': size})
     except Exception as e:
-        print(f"Error listing files from Vercel KV: {e}")
+        print(f"Error listing files from Cloudinary: {e}")
     return jsonify(files)
 
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
-    """Handles adding a new file link."""
+    """Handles file uploads."""
     if not is_user_logged_in():
         abort(403) # Forbidden
 
-    data = request.get_json()
-    filename = data.get('filename')
-    url = data.get('url')
-
-    if not filename or not url:
-        return jsonify({'error': 'Filename and URL are required'}), 400
-
-    # Save the filename and URL to the KV store
-    kv.set(secure_filename(filename), url)
-    return jsonify({'success': f'Link for {filename} added successfully'}), 201
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    if file:
+        filename = secure_filename(file.filename)
+        # Upload to Cloudinary. 'public_id' is the filename without extension.
+        # 'resource_type="raw"' is for non-image/video files.
+        cloudinary.uploader.upload(
+            file,
+            public_id=os.path.splitext(filename)[0],
+            resource_type="raw"
+        )
+        return jsonify({'success': f'File {filename} uploaded successfully'}), 201
 
 @app.route('/api/delete/<filename>', methods=['DELETE'])
 def delete_file(filename):
@@ -132,12 +157,13 @@ def delete_file(filename):
     if not is_user_logged_in():
         abort(403) # Forbidden
     try:
-        # Delete the key (filename) from the KV store
-        kv.delete(secure_filename(filename))
+        # Delete from Cloudinary using the public_id (filename without extension)
+        public_id = os.path.splitext(secure_filename(filename))[0]
+        cloudinary.uploader.destroy(public_id, resource_type="raw")
         return jsonify({'success': f'File {filename} deleted'}), 200
     except Exception as e:
-        print(f"Error deleting file from Vercel KV: {e}")
-        return jsonify({'error': 'Could not delete link'}), 500
+        print(f"Error deleting file from Cloudinary: {e}")
+        return jsonify({'error': 'Could not delete file'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
