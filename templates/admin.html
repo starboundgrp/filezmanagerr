@@ -133,12 +133,15 @@
         </div>
 
         <div class="admin-section">
-            <h2>Upload New File</h2>
-            <form id="upload-form">
+            <h2>Add New File Link</h2>
+            <form id="add-link-form">
                 <div class="form-group">
-                    <input type="file" id="file-input" required>
+                    <input type="text" id="filename-input" placeholder="Filename (e.g., My Document.pdf)" required style="width: 95%; padding: 10px; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 5px;">
                 </div>
-                <button type="submit" class="submit-btn">Upload File</button>
+                <div class="form-group">
+                    <input type="url" id="url-input" placeholder="External URL (e.g., Google Drive Link)" required style="width: 95%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px;">
+                </div>
+                <button type="submit" class="submit-btn">Add Link</button>
                 <p id="upload-status" style="text-align: center; margin-top: 1rem;"></p>
             </form>
         </div>
@@ -154,8 +157,9 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const fileList = document.getElementById('manage-file-list');
-            const uploadForm = document.getElementById('upload-form');
-            const fileInput = document.getElementById('file-input');
+            const addLinkForm = document.getElementById('add-link-form');
+            const filenameInput = document.getElementById('filename-input');
+            const urlInput = document.getElementById('url-input');
             const uploadStatus = document.getElementById('upload-status');
 
             // Function to fetch and display files
@@ -172,7 +176,10 @@
                             const listItem = document.createElement('li');
                             listItem.className = 'file-item';
                             listItem.innerHTML = `
-                                <span>${file.name}</span>
+                                <div class="file-info">
+                                    <span class="file-name">${file.name}</span>
+                                    <span class="file-size" style="color: #9ca3af;">External Link</span>
+                                </div>
                                 <button class="delete-btn" data-filename="${file.name}">Delete</button>
                             `;
                             fileList.appendChild(listItem);
@@ -198,40 +205,40 @@
                 }
             });
 
-            // Handle file upload
-            uploadForm.addEventListener('submit', (e) => {
+            // Handle adding a new link
+            addLinkForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                const file = fileInput.files[0];
-                if (!file) {
-                    uploadStatus.textContent = 'Please select a file.';
+                const filename = filenameInput.value;
+                const url = urlInput.value;
+
+                if (!filename || !url) {
+                    uploadStatus.textContent = 'Please provide both a filename and a URL.';
                     uploadStatus.style.color = 'var(--danger-color)';
                     return;
                 }
 
-                const formData = new FormData();
-                formData.append('file', file);
-
-                uploadStatus.textContent = 'Uploading...';
+                uploadStatus.textContent = 'Adding link...';
                 uploadStatus.style.color = 'var(--accent-color)';
 
                 fetch('/api/upload', {
                     method: 'POST',
-                    body: formData
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: filename, url: url })
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         uploadStatus.textContent = data.success;
                         uploadStatus.style.color = 'var(--accent-color)';
-                        uploadForm.reset();
+                        addLinkForm.reset();
                         loadFiles(); // Refresh file list
                     } else {
-                        uploadStatus.textContent = 'Upload failed: ' + (data.error || 'Unknown error');
+                        uploadStatus.textContent = 'Failed to add link: ' + (data.error || 'Unknown error');
                         uploadStatus.style.color = 'var(--danger-color)';
                     }
                 })
                 .catch(err => {
-                    uploadStatus.textContent = 'An error occurred during upload.';
+                    uploadStatus.textContent = 'An error occurred.';
                     uploadStatus.style.color = 'var(--danger-color)';
                 });
             });
