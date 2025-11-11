@@ -14,7 +14,7 @@ app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
 # --- Securely load credentials from Environment Variables ---
 # Fallback values ('admin', 'admin123') are for easy local development.
 app.config['ADMIN_USERNAME'] = os.environ.get('ADMIN_USERNAME', 'adbriasfilesstar12')
-app.config['ADMIN_PASSWORD'] = os.environ.get('ADMIN_PASSWORD', 'admi8?%03\rE,w4FA3^Wy4')
+app.config['ADMIN_PASSWORD'] = os.environ.get('ADMIN_PASSWORD', 'admi8?%03E,w4FA3^Wy4')
 
 @app.before_first_request
 def create_upload_directory():
