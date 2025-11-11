@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Download Manager</title>
+    <style>
+        :root {
+            --background-color: #fffbeb; /* Light Yellow */
+            --text-color: #374151;       /* Dark Gray */
+            --accent-color: #f97316;       /* Orange */
+            --border-color: #fde68a;       /* Lighter Yellow */
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        h1 {
+            color: var(--accent-color);
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .file-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .file-name {
+            font-size: 1.1rem;
+        }
+
+        .file-size {
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+
+        .download-btn {
+            background-color: var(--accent-color);
+            color: #fff;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .download-btn:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Available Files</h1>
+        <ul class="file-list" id="file-list">
+            <!-- Files will be loaded here by JavaScript -->
+            <li class="file-item">Loading files...</li>
+        </ul>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const fileList = document.getElementById('file-list');
+
+            fetch('/api/files')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(files => {
+                    fileList.innerHTML = ''; // Clear the "Loading..." message
+
+                    if (files.length === 0) {
+                        fileList.innerHTML = '<li class="file-item">No files available for download.</li>';
+                        return;
+                    }
+
+                    files.forEach(file => {
+                        const listItem = document.createElement('li');
+                        listItem.className = 'file-item';
+
+                        // Note: The API returns file.name and file.size
+                        listItem.innerHTML = `
+                            <span class="file-name">${file.name}</span>
+                            <a href="/resource/${file.name}" class="download-btn">View Resource</a>
+                        `;
+                        fileList.appendChild(listItem);
+                    });
+                })
+                .catch(error => {
+                    fileList.innerHTML = '<li class="file-item" style="color: #ef4444;">Error loading files. Please try again later.</li>';
+                    console.error('Error fetching files:', error);
+                });
+        });
+    </script>
+</body>
+</html>
