@@ -23,6 +23,11 @@ def create_app():
     def is_user_logged_in():
         return session.get('logged_in')
 
+    @app.route('/favicon.ico')
+@app.route('/favicon.png')
+def favicon():
+    return '', 204
+
     # --- Public Routes ---
     @app.route('/')
     def index():
