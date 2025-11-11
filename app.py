@@ -1,17 +1,16 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory, jsonify, abort
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, abort
 import random
 from werkzeug.utils import secure_filename
+from vercel_kv import kv
 
 app = Flask(__name__)
 
 # --- Configuration ---
 app.secret_key = os.environ.get('SECRET_KEY', 'your-very-secret-key')
-app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', '/tmp/uploads')
 app.config['ADMIN_USERNAME'] = os.environ.get('ADMIN_USERNAME', 'adbriasfilesstar12')
 app.config['ADMIN_PASSWORD'] = os.environ.get('ADMIN_PASSWORD', 'admi8?%03E,w4FA3^Wy4')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limit uploads to 16 MB
-
 
 # --- Helper Functions & Initial Setup ---
 def is_user_logged_in():
@@ -42,9 +41,8 @@ def resource_page(filename):
 @app.route('/prepare-download/<filename>')
 def prepare_download(filename):
     """Serves the intermediate 'ad gate' page."""
-    safe_filename = secure_filename(filename)
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename)
-    if not os.path.exists(filepath):
+    # Check if the file link exists in our KV store
+    if not kv.exists(secure_filename(filename)):
         abort(404)
 
     # --- Select a random video ---
@@ -60,14 +58,18 @@ def prepare_download(filename):
         print("Warning: 'static/videos' directory not found. No video will be displayed.")
     return render_template(
         'download_gate.html', 
-        filename=safe_filename, 
+        filename=secure_filename(filename), 
         video_path=video_path)
 
 @app.route('/download/<filename>')
 def download_file(filename):
-    """Serves a file for download."""
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
-
+    """Redirects to the Cloudinary URL for the file to start the download."""
+    # Get the external URL from the KV store and redirect the user
+    download_url = kv.get(secure_filename(filename))
+    if download_url:
+        return redirect(download_url)
+    else:
+        abort(404)
 # --- Admin & Auth Routes ---
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
@@ -97,55 +99,45 @@ def logout():
 def list_files():
     """Returns a JSON list of files in the upload folder."""
     files = []
-    upload_folder = app.config['UPLOAD_FOLDER']
     try:
-        os.makedirs(upload_folder, exist_ok=True) # Ensure directory exists
-        for filename in os.listdir(upload_folder):
-            if os.path.isfile(os.path.join(upload_folder, filename)) and not filename.startswith('.'):
-                path = os.path.join(upload_folder, filename)
-                size_bytes = os.path.getsize(path)
-                # Format size to be human-readable
-                if size_bytes < 1024 * 1024:
-                    size = f"{size_bytes / 1024:.2f} KB"
-                else:
-                    size = f"{size_bytes / (1024 * 1024):.2f} MB"
-                files.append({'name': filename, 'size': size})
+        # Get all keys (filenames) from the KV store
+        filenames = kv.keys('*')
+        for filename in filenames:
+            # For simplicity, we won't show file size as we don't know it.
+            files.append({'name': filename, 'size': 'N/A'})
     except Exception as e:
-        # If any error occurs with the filesystem, log it and return an empty list.
-        # This prevents the entire app from crashing.
-        print(f"Error reading upload folder: {e}")
+        print(f"Error listing files from Vercel KV: {e}")
     return jsonify(files)
 
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
-    """Handles file uploads."""
+    """Handles adding a new file link."""
     if not is_user_logged_in():
         abort(403) # Forbidden
 
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-    if file:
-        filename = secure_filename(file.filename)
-        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True) # Ensure directory exists
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        return jsonify({'success': f'File {filename} uploaded successfully'}), 201
+    data = request.get_json()
+    filename = data.get('filename')
+    url = data.get('url')
+
+    if not filename or not url:
+        return jsonify({'error': 'Filename and URL are required'}), 400
+
+    # Save the filename and URL to the KV store
+    kv.set(secure_filename(filename), url)
+    return jsonify({'success': f'Link for {filename} added successfully'}), 201
 
 @app.route('/api/delete/<filename>', methods=['DELETE'])
 def delete_file(filename):
     """Handles file deletions."""
     if not is_user_logged_in():
         abort(403) # Forbidden
-
     try:
-        # No need to create directory for deletion, just check path
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(filename))
-        os.remove(filepath)
+        # Delete the key (filename) from the KV store
+        kv.delete(secure_filename(filename))
         return jsonify({'success': f'File {filename} deleted'}), 200
-    except FileNotFoundError:
-        return jsonify({'error': 'File not found'}), 404
+    except Exception as e:
+        print(f"Error deleting file from Vercel KV: {e}")
+        return jsonify({'error': 'Could not delete link'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
