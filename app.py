@@ -34,11 +34,9 @@ def index():
 @app.route('/resource/<filename>')
 def resource_page(filename):
     """Serves a dedicated page for a single resource."""
+    # On a serverless platform, we can't guarantee the file still exists.
+    # We will proceed and let the final download link handle any "Not Found" errors.
     safe_filename = secure_filename(filename)
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename)
-    if not os.path.exists(filepath):
-        abort(404)
-
     return render_template('resource.html', filename=safe_filename)
     
 @app.route('/prepare-download/<filename>')
