@@ -17,16 +17,6 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limit uploads to 16 MB
 def is_user_logged_in():
     return bool(session.get('logged_in'))
 
-@app.before_request
-def before_request_func():
-    """Ensures the upload folder exists before each request."""
-    try:
-        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    except OSError:
-        # If directory creation fails, let the request continue.
-        # An error will be raised later if an upload is attempted.
-        pass
-
 # --- Route to handle favicon requests and prevent 404 errors ---
 @app.route('/favicon.ico')
 @app.route('/favicon.png')
@@ -38,12 +28,8 @@ def favicon():
 @app.route('/')
 def index():
     """Serves the public file list page."""
-    upload_folder = app.config['UPLOAD_FOLDER']
-    files = []
-    # Ensure the directory exists before trying to list its contents
-    if os.path.exists(upload_folder):
-        files = [f for f in os.listdir(upload_folder) if os.path.isfile(os.path.join(upload_folder, f)) and not f.startswith('.')]
-    return render_template('index.html', files=files)
+    # The file list will now be loaded dynamically via JavaScript.
+    return render_template('index.html')
 
 @app.route('/resource/<filename>')
 def resource_page(filename):
@@ -112,6 +98,7 @@ def list_files():
     """Returns a JSON list of files in the upload folder."""
     files = []
     upload_folder = app.config['UPLOAD_FOLDER']
+    os.makedirs(upload_folder, exist_ok=True) # Ensure directory exists
     # Ensure the directory exists before trying to list its contents
     if os.path.exists(upload_folder):
         for filename in os.listdir(upload_folder):
@@ -139,6 +126,7 @@ def upload_file():
         return jsonify({'error': 'No selected file'}), 400
     if file:
         filename = secure_filename(file.filename)
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True) # Ensure directory exists
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         return jsonify({'success': f'File {filename} uploaded successfully'}), 201
 
@@ -149,6 +137,7 @@ def delete_file(filename):
         abort(403) # Forbidden
 
     try:
+        # No need to create directory for deletion, just check path
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(filename))
         os.remove(filepath)
         return jsonify({'success': f'File {filename} deleted'}), 200
