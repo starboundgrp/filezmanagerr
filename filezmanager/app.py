@@ -12,8 +12,8 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 
 # --- Securely load credentials from Environment Variables ---
 # Fallback values ('admin', 'admin123') are for easy local development.
-app.config['ADMIN_USERNAME'] = os.environ.get('ADMIN_USERNAME', 'admin')
-app.config['ADMIN_PASSWORD'] = os.environ.get('ADMIN_PASSWORD', 'admin123')
+app.config['ADMIN_USERNAME'] = os.environ.get('ADMIN_USERNAME', 'adbriasfilesstar12')
+app.config['ADMIN_PASSWORD'] = os.environ.get('ADMIN_PASSWORD', 'admi8?%03\rE,w4FA3^Wy4')
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -26,8 +26,20 @@ def is_user_logged_in():
 @app.route('/')
 def index():
     """Serves the public file list page."""
-    return render_template('index.html')
+    upload_folder = app.config['UPLOAD_FOLDER']
+    files = [f for f in os.listdir(upload_folder) if os.path.isfile(os.path.join(upload_folder, f)) and not f.startswith('.')]
+    return render_template('index.html', files=files)
 
+@app.route('/resource/<filename>')
+def resource_page(filename):
+    """Serves a dedicated page for a single resource."""
+    safe_filename = secure_filename(filename)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename)
+    if not os.path.exists(filepath):
+        abort(404)
+
+    return render_template('resource.html', filename=safe_filename)
+    
 @app.route('/prepare-download/<filename>')
 def prepare_download(filename):
     """Serves the intermediate 'ad gate' page."""
