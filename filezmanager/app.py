@@ -7,20 +7,25 @@ app = Flask(__name__)
 
 # --- Configuration ---
 app.secret_key = os.environ.get('SECRET_KEY', 'your-very-secret-key')
-app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
+app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', '/tmp/uploads')
 app.config['ADMIN_USERNAME'] = os.environ.get('ADMIN_USERNAME', 'adbriasfilesstar12')
 app.config['ADMIN_PASSWORD'] = os.environ.get('ADMIN_PASSWORD', 'admi8?%03E,w4FA3^Wy4')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limit uploads to 16 MB
 
 
 # --- Helper Functions & Initial Setup ---
 def is_user_logged_in():
-    return session.get('logged_in')
+    return bool(session.get('logged_in'))
 
 @app.before_request
 def before_request_func():
     """Ensures the upload folder exists before each request."""
-    if not os.path.exists(app.config['UPLOAD_FOLDER']):
-        os.makedirs(app.config['UPLOAD_FOLDER'])
+    try:
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    except OSError:
+        # If directory creation fails, let the request continue.
+        # An error will be raised later if an upload is attempted.
+        pass
 
 # --- Route to handle favicon requests and prevent 404 errors ---
 @app.route('/favicon.ico')
