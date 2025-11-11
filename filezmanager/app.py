@@ -98,9 +98,8 @@ def list_files():
     """Returns a JSON list of files in the upload folder."""
     files = []
     upload_folder = app.config['UPLOAD_FOLDER']
-    os.makedirs(upload_folder, exist_ok=True) # Ensure directory exists
-    # Ensure the directory exists before trying to list its contents
-    if os.path.exists(upload_folder):
+    try:
+        os.makedirs(upload_folder, exist_ok=True) # Ensure directory exists
         for filename in os.listdir(upload_folder):
             if os.path.isfile(os.path.join(upload_folder, filename)) and not filename.startswith('.'):
                 path = os.path.join(upload_folder, filename)
@@ -111,6 +110,10 @@ def list_files():
                 else:
                     size = f"{size_bytes / (1024 * 1024):.2f} MB"
                 files.append({'name': filename, 'size': size})
+    except Exception as e:
+        # If any error occurs with the filesystem, log it and return an empty list.
+        # This prevents the entire app from crashing.
+        print(f"Error reading upload folder: {e}")
     return jsonify(files)
 
 @app.route('/api/upload', methods=['POST'])
