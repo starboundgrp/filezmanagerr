@@ -51,13 +51,15 @@ def prepare_download(filename):
 
     # --- Select a random video ---
     video_path = None
-    videos_dir = os.path.join(app.static_folder, 'videos')
-    if os.path.exists(videos_dir):
+    try:
+        videos_dir = os.path.join(app.static_folder, 'videos')
         available_videos = [f for f in os.listdir(videos_dir) if os.path.isfile(os.path.join(videos_dir, f)) and not f.startswith('.')]
         if available_videos:
             random_video_filename = random.choice(available_videos)
-            video_path = os.path.join('videos', random_video_filename).replace("\\", "/") # Use forward slashes for URL
-
+            # Construct the path relative to the 'static' folder
+            video_path = os.path.join('videos', random_video_filename).replace("\\", "/")
+    except FileNotFoundError:
+        print("Warning: 'static/videos' directory not found. No video will be displayed.")
     return render_template(
         'download_gate.html', 
         filename=safe_filename, 
