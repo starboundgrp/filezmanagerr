@@ -12,8 +12,8 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 
 # --- Securely load credentials from Environment Variables ---
 # Fallback values ('admin', 'admin123') are for easy local development.
-app.config['ADMIN_USERNAME'] = os.environ.get('ADMIN_USERNAME', 'adbriasfilesstar12')
-app.config['ADMIN_PASSWORD'] = os.environ.get('ADMIN_PASSWORD', 'admi8?%03\rE,w4FA3^Wy4')
+app.config['ADMIN_USERNAME'] = os.environ.get('ADMIN_USERNAME', 'briasfilesstar12')
+app.config['ADMIN_PASSWORD'] = os.environ.get('ADMIN_PASSWORD', 'i8?%03\rE,w4FA3^Wy4')
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
