@@ -1,5 +1,4 @@
 Flask==2.x.x
 gunicorn
 python-dotenv
-vercel-kv
-requests
+cloudinary
