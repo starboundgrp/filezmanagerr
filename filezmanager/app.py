@@ -28,7 +28,10 @@ def create_app():
     def index():
         """Serves the public file list page."""
         upload_folder = app.config['UPLOAD_FOLDER']
-        files = [f for f in os.listdir(upload_folder) if os.path.isfile(os.path.join(upload_folder, f)) and not f.startswith('.')]
+        files = []
+        # Ensure the directory exists before trying to list its contents
+        if os.path.exists(upload_folder):
+            files = [f for f in os.listdir(upload_folder) if os.path.isfile(os.path.join(upload_folder, f)) and not f.startswith('.')]
         return render_template('index.html', files=files)
 
     @app.route('/resource/<filename>')
