@@ -78,10 +78,8 @@ def prepare_download(filename):
             random_video_filename = random.choice(available_videos)
             print(f"DEBUG: Selected video: {random_video_filename}")
             # Construct the path relative to the 'static' folder for url_for
-            video_path_for_url_for = os.path.join('videos', random_video_filename).replace("\\", "/")
-            # Generate the final URL within the Flask context
-            with app.app_context():
-                video_url = url_for('static', filename=video_path_for_url_for)
+            video_path_for_url_for = f"videos/{random_video_filename}"
+            video_url = url_for('static', filename=video_path_for_url_for)
             print(f"DEBUG: Generated video URL: {video_url}")
         else:
             print("Warning: 'static/videos' directory is empty or contains no valid video files.")
