@@ -1,5 +1,8 @@
 import os
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, abort
+from dotenv import load_dotenv
+load_dotenv() # Load environment variables from .env file
+
 import random
 from werkzeug.utils import secure_filename
 import cloudinary
