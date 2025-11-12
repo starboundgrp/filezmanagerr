@@ -58,20 +58,24 @@ def prepare_download(filename):
         abort(404)
 
     # --- Select a random video ---
-    video_path = None
+    video_url = None # We will now pass the full URL to the template
     try:
-        videos_dir = os.path.join(app.static_folder, 'videos')
+        # Use app.root_path for a more reliable path to the static/videos directory
+        videos_dir = os.path.join(app.root_path, 'static', 'videos')
         available_videos = [f for f in os.listdir(videos_dir) if os.path.isfile(os.path.join(videos_dir, f)) and not f.startswith('.')]
         if available_videos:
             random_video_filename = random.choice(available_videos)
-            # Construct the path relative to the 'static' folder
-            video_path = os.path.join('videos', random_video_filename).replace("\\", "/")
+            # Construct the path relative to the 'static' folder for url_for
+            video_path_for_url_for = os.path.join('videos', random_video_filename).replace("\\", "/")
+            # Generate the final URL within the Flask context
+            with app.app_context():
+                video_url = url_for('static', filename=video_path_for_url_for)
     except FileNotFoundError:
         print("Warning: 'static/videos' directory not found. No video will be displayed.")
     return render_template(
         'download_gate.html', 
         filename=secure_filename(filename), 
-        video_path=video_path)
+        video_url=video_url)
 
 @app.route('/download/<filename>')
 def download_file(filename):
