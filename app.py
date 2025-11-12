@@ -159,15 +159,19 @@ def upload_file():
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
     if file:
-        filename = secure_filename(file.filename)
-        # Upload to Cloudinary. 'public_id' is the filename without extension.
-        # 'resource_type="raw"' is for non-image/video files.
-        cloudinary.uploader.upload(
-            file,
-            public_id=os.path.splitext(filename)[0],
-            resource_type="raw"
-        )
-        return jsonify({'success': f'File {filename} uploaded successfully'}), 201
+        try:
+            filename = secure_filename(file.filename)
+            # Upload to Cloudinary. 'public_id' is the filename without extension.
+            # 'resource_type="raw"' is for non-image/video files.
+            cloudinary.uploader.upload(
+                file,
+                public_id=os.path.splitext(filename)[0],
+                resource_type="raw"
+            )
+            return jsonify({'success': f'File {filename} uploaded successfully'}), 201
+        except Exception as e:
+            print(f"Error uploading to Cloudinary: {e}")
+            return jsonify({'error': f'Server error during upload: {e}'}), 500
 
 @app.route('/api/delete/<filename>', methods=['DELETE'])
 def delete_file(filename):
