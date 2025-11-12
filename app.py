@@ -65,16 +65,24 @@ def prepare_download(filename):
     try:
         # Use app.root_path for a more reliable path to the static/videos directory
         videos_dir = os.path.join(app.root_path, 'static', 'videos')
+        print(f"DEBUG: Looking for videos in: {videos_dir}")
+
         available_videos = [f for f in os.listdir(videos_dir) if os.path.isfile(os.path.join(videos_dir, f)) and not f.startswith('.')]
+        print(f"DEBUG: Found available videos: {available_videos}")
+
         if available_videos:
             random_video_filename = random.choice(available_videos)
+            print(f"DEBUG: Selected video: {random_video_filename}")
             # Construct the path relative to the 'static' folder for url_for
             video_path_for_url_for = os.path.join('videos', random_video_filename).replace("\\", "/")
             # Generate the final URL within the Flask context
             with app.app_context():
                 video_url = url_for('static', filename=video_path_for_url_for)
+            print(f"DEBUG: Generated video URL: {video_url}")
+        else:
+            print("Warning: 'static/videos' directory is empty or contains no valid video files.")
     except FileNotFoundError:
-        print("Warning: 'static/videos' directory not found. No video will be displayed.")
+        print("ERROR: The 'static/videos' directory was not found at the expected path.")
     return render_template(
         'download_gate.html', 
         filename=secure_filename(filename), 
