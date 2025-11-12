@@ -6,7 +6,10 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 
-app = Flask(__name__)
+# Explicitly set the static folder to be 'static' in the same directory as this script.
+# This makes the app more robust, especially in different deployment environments.
+app = Flask(__name__, static_folder='static')
+
 
 # --- Configuration ---
 app.secret_key = os.environ.get('SECRET_KEY', 'your-very-secret-key')
