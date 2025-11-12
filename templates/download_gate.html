@@ -89,11 +89,11 @@
         <p>Please wait for the timer to finish to start your download for <strong>{{ filename }}</strong>.</p>
 
         <!-- Ad/Video Placeholder -->
-        {% if video_path %}
+        {% if video_url %}
         <div class="video-container">
             <!-- This now points to your local video file -->
             <video autoplay muted loop playsinline controls>
-                <source src="{{ url_for('static', filename=video_path) }}" type="video/mp4">
+                <source src="{{ video_url }}" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
         </div>
@@ -111,6 +111,15 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const video = document.querySelector('video');
+            if (video) {
+                // Attempt to play the video programmatically
+                video.play().catch(error => {
+                    // Autoplay was prevented. This is common.
+                    // The user can still play it manually with the controls.
+                    console.log("Video autoplay was prevented by the browser. User can play manually.");
+                });
+            }
             const countdownElement = document.getElementById('countdown');
             const downloadLink = document.getElementById('download-link');
             let countdown = 10; // seconds
