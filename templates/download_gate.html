@@ -58,6 +58,18 @@
             width: 100%;
             height: 100%;
         }
+        
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
 
         .download-btn {
             background-color: var(--accent-color);
@@ -92,7 +104,7 @@
         {% if video_url %}
         <div class="video-container">
             <!-- This now points to your local video file -->
-            <video autoplay muted loop playsinline controls>
+            <video id="ad-video" autoplay muted loop playsinline controls>
                 <source src="{{ video_url }}" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
@@ -104,39 +116,51 @@
         </div>
         {% endif %}
 
-        <a href="/download/{{ filename }}" id="download-link" class="download-btn" disabled>
+        <button id="download-btn" class="download-btn" disabled>
             Download Now (<span id="countdown">10</span>)
-        </a>
+        </button>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const video = document.querySelector('video');
+            const video = document.getElementById('ad-video');
             if (video) {
                 // Attempt to play the video programmatically
-                video.play().catch(error => {
-                    // Autoplay was prevented. This is common.
-                    // The user can still play it manually with the controls.
-                    console.log("Video autoplay was prevented by the browser. User can play manually.");
+                const playPromise = video.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        // Autoplay was prevented. Show a "click to play" message.
+                        console.log("Video autoplay was prevented. Adding play button overlay.");
+                        const overlay = document.createElement('div');
+                        overlay.className = 'video-overlay';
+                        overlay.innerHTML = '<button class="download-btn">Click to Play Video</button>';
+                        video.parentElement.appendChild(overlay);
+                        overlay.addEventListener('click', () => {
+                            video.play();
+                            overlay.remove();
+                        }, { once: true });
+                    });
                 });
             }
             const countdownElement = document.getElementById('countdown');
-            const downloadLink = document.getElementById('download-link');
+            const downloadBtn = document.getElementById('download-btn');
             let countdown = 10; // seconds
 
-            downloadLink.addEventListener('click', (e) => {
-                if (downloadLink.hasAttribute('disabled')) {
-                    e.preventDefault();
-                }
+            // When the button is clicked, redirect to the download URL
+            downloadBtn.addEventListener('click', () => {
+                // This will only be clickable when not disabled
+                window.location.href = `/download/{{ filename }}`;
             });
 
-            const interval = setInterval(() => {
+            let interval;
+            interval = setInterval(() => {
                 countdown--;
                 countdownElement.textContent = countdown;
                 if (countdown <= 0) {
                     clearInterval(interval);
-                    downloadLink.removeAttribute('disabled');
-                    downloadLink.textContent = 'Download Now';
+                    // Enable the button and change its text
+                    downloadBtn.removeAttribute('disabled');
+                    downloadBtn.textContent = 'Download Now';
                 }
             }, 1000);
         });
