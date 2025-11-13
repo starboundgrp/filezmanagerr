@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Preparing Download</title>
+    <title>Preparing Download: {{ filename }}</title>
     <style>
         :root {
             --background-color: #fffbeb;
@@ -115,21 +115,23 @@
 <body>
     <div class="container">
         <h1>Your Download is Almost Ready!</h1>
-        <p>Please wait for the timer to finish to start your download for <strong id="filename">example.pdf</strong>.</p>
+        <p>Please wait for the timer to finish to start your download for <strong>{{ filename }}</strong>.</p>
 
+        {% if video_url %}
         <!-- Video Container -->
         <div class="video-container" id="video-container">
             <video id="ad-video" muted loop playsinline controls>
-                <source src="sample-video.mp4" type="video/mp4">
+                <source src="{{ video_url }}" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
         </div>
-
-        <!-- No Video Placeholder (hidden by default) -->
-        <div class="no-video-placeholder" id="no-video-placeholder" style="display: none;">
+        {% else %}
+        <!-- No Video Placeholder -->
+        <div class="no-video-placeholder">
             <p><strong>No video found.</strong></p>
             <p>Please make sure you have video files (e.g., .mp4) inside the <code>static/videos</code> folder in your project.</p>
         </div>
+        {% endif %}
 
         <button id="download-btn" class="download-btn" disabled>
             Download Now (<span id="countdown">10</span>)
@@ -138,37 +140,12 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Configuration - Set these values from your backend
-            const config = {
-                filename: 'example.pdf',
-                videoUrl: 'sample-video.mp4', // Set to null or empty string if no video
-                downloadUrl: '/download/example.pdf',
-                countdownSeconds: 10
-            };
-
-            // Update filename in the page
-            const filenameElement = document.getElementById('filename');
-            if (filenameElement) {
-                filenameElement.textContent = config.filename;
-            }
-
-            // Handle video setup
             const video = document.getElementById('ad-video');
             const videoContainer = document.getElementById('video-container');
-            const noVideoPlaceholder = document.getElementById('no-video-placeholder');
 
-            if (config.videoUrl && config.videoUrl.trim() !== '') {
-                // Update video source
-                const source = video.querySelector('source');
-                if (source) {
-                    source.src = config.videoUrl;
-                    video.load();
-                }
-
-                // Show video container
-                videoContainer.style.display = 'block';
-                noVideoPlaceholder.style.display = 'none';
-
+            {% if video_url %}
+            // Video is available, try to play it
+            if (video) {
                 // Wait for video to be ready before attempting to play
                 video.addEventListener('loadedmetadata', () => {
                     const playPromise = video.play();
@@ -191,19 +168,15 @@
                 // Handle video load errors
                 video.addEventListener('error', (e) => {
                     console.error('Video failed to load:', e);
-                    videoContainer.style.display = 'none';
-                    noVideoPlaceholder.style.display = 'block';
+                    console.error('Video src:', video.querySelector('source').src);
                 });
-            } else {
-                // No video available, show placeholder
-                videoContainer.style.display = 'none';
-                noVideoPlaceholder.style.display = 'block';
             }
+            {% endif %}
 
             // Countdown timer
             const countdownElement = document.getElementById('countdown');
             const downloadBtn = document.getElementById('download-btn');
-            let countdown = config.countdownSeconds;
+            let countdown = 10;
 
             const interval = setInterval(() => {
                 countdown--;
@@ -219,7 +192,7 @@
             // Handle download button click
             downloadBtn.addEventListener('click', () => {
                 if (!downloadBtn.disabled) {
-                    window.location.href = config.downloadUrl;
+                    window.location.href = "{{ url_for('download_file', filename=filename) }}";
                 }
             });
         });
