@@ -157,7 +157,7 @@
             const videoContainer = document.getElementById('video-container');
             const noVideoPlaceholder = document.getElementById('no-video-placeholder');
 
-            if (config.videoUrl && video) {
+            if (config.videoUrl && config.videoUrl.trim() !== '') {
                 // Update video source
                 const source = video.querySelector('source');
                 if (source) {
@@ -165,22 +165,35 @@
                     video.load();
                 }
 
-                // Attempt to play the video programmatically
-                const playPromise = video.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(error => {
-                        console.log("Video autoplay was prevented. Adding play button overlay.");
-                        const overlay = document.createElement('div');
-                        overlay.className = 'video-overlay';
-                        overlay.innerHTML = '<button class="download-btn">Click to Play Video</button>';
-                        videoContainer.appendChild(overlay);
-                        
-                        overlay.addEventListener('click', () => {
-                            video.play();
-                            overlay.remove();
-                        }, { once: true });
-                    });
-                }
+                // Show video container
+                videoContainer.style.display = 'block';
+                noVideoPlaceholder.style.display = 'none';
+
+                // Wait for video to be ready before attempting to play
+                video.addEventListener('loadedmetadata', () => {
+                    const playPromise = video.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(error => {
+                            console.log("Video autoplay was prevented. Adding play button overlay.");
+                            const overlay = document.createElement('div');
+                            overlay.className = 'video-overlay';
+                            overlay.innerHTML = '<button class="download-btn">Click to Play Video</button>';
+                            videoContainer.appendChild(overlay);
+                            
+                            overlay.addEventListener('click', () => {
+                                video.play().catch(e => console.error('Play error:', e));
+                                overlay.remove();
+                            }, { once: true });
+                        });
+                    }
+                });
+
+                // Handle video load errors
+                video.addEventListener('error', (e) => {
+                    console.error('Video failed to load:', e);
+                    videoContainer.style.display = 'none';
+                    noVideoPlaceholder.style.display = 'block';
+                });
             } else {
                 // No video available, show placeholder
                 videoContainer.style.display = 'none';
