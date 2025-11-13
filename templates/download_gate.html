@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Preparing Download: {{ filename }}</title>
+    <title>Preparing Download</title>
     <style>
         :root {
-            --background-color: #fffbeb; /* Light Yellow */
-            --text-color: #374151;       /* Dark Gray */
-            --accent-color: #f97316;       /* Orange */
-            --border-color: #fde68a;       /* Lighter Yellow */
+            --background-color: #fffbeb;
+            --text-color: #374151;
+            --accent-color: #f97316;
+            --border-color: #fde68a;
         }
 
         body {
@@ -43,13 +43,15 @@
             position: relative;
             overflow: hidden;
             width: 100%;
-            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+            padding-top: 56.25%;
             margin: 2rem 0;
             border: 1px solid var(--border-color);
             border-radius: 8px;
+            background-color: #000;
         }
 
-        .video-container iframe, .video-container video {
+        .video-container iframe,
+        .video-container video {
             position: absolute;
             top: 0;
             left: 0;
@@ -69,6 +71,7 @@
             align-items: center;
             justify-content: center;
             background-color: rgba(0, 0, 0, 0.5);
+            z-index: 10;
         }
 
         .download-btn {
@@ -88,33 +91,45 @@
             opacity: 0.9;
         }
 
-        .download-btn[disabled] {
+        .download-btn:disabled {
             background-color: #9ca3af;
             cursor: not-allowed;
             opacity: 0.7;
+        }
+
+        .no-video-placeholder {
+            margin: 2rem 0;
+            padding: 1rem;
+            border: 1px dashed var(--accent-color);
+            border-radius: 8px;
+        }
+
+        .no-video-placeholder code {
+            background-color: #fef3c7;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Your Download is Almost Ready!</h1>
-        <p>Please wait for the timer to finish to start your download for <strong>{{ filename }}</strong>.</p>
+        <p>Please wait for the timer to finish to start your download for <strong id="filename">example.pdf</strong>.</p>
 
-        <!-- Ad/Video Placeholder -->
-        {% if video_url %}
-        <div class="video-container">
-            <!-- This now points to your local video file -->
-            <video id="ad-video" autoplay muted loop playsinline controls>
-                <source src="{{ video_url }}" type="video/mp4">
+        <!-- Video Container -->
+        <div class="video-container" id="video-container">
+            <video id="ad-video" muted loop playsinline controls>
+                <source src="sample-video.mp4" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
         </div>
-        {% else %}
-        <div style="margin: 2rem 0; padding: 1rem; border: 1px dashed var(--accent-color); border-radius: 8px;">
+
+        <!-- No Video Placeholder (hidden by default) -->
+        <div class="no-video-placeholder" id="no-video-placeholder" style="display: none;">
             <p><strong>No video found.</strong></p>
             <p>Please make sure you have video files (e.g., .mp4) inside the <code>static/videos</code> folder in your project.</p>
         </div>
-        {% endif %}
 
         <button id="download-btn" class="download-btn" disabled>
             Download Now (<span id="countdown">10</span>)
@@ -123,46 +138,77 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // Configuration - Set these values from your backend
+            const config = {
+                filename: 'example.pdf',
+                videoUrl: 'sample-video.mp4', // Set to null or empty string if no video
+                downloadUrl: '/download/example.pdf',
+                countdownSeconds: 10
+            };
+
+            // Update filename in the page
+            const filenameElement = document.getElementById('filename');
+            if (filenameElement) {
+                filenameElement.textContent = config.filename;
+            }
+
+            // Handle video setup
             const video = document.getElementById('ad-video');
-            if (video) {
+            const videoContainer = document.getElementById('video-container');
+            const noVideoPlaceholder = document.getElementById('no-video-placeholder');
+
+            if (config.videoUrl && video) {
+                // Update video source
+                const source = video.querySelector('source');
+                if (source) {
+                    source.src = config.videoUrl;
+                    video.load();
+                }
+
                 // Attempt to play the video programmatically
                 const playPromise = video.play();
                 if (playPromise !== undefined) {
                     playPromise.catch(error => {
-                        // Autoplay was prevented. Show a "click to play" message.
                         console.log("Video autoplay was prevented. Adding play button overlay.");
                         const overlay = document.createElement('div');
                         overlay.className = 'video-overlay';
                         overlay.innerHTML = '<button class="download-btn">Click to Play Video</button>';
-                        video.parentElement.appendChild(overlay);
+                        videoContainer.appendChild(overlay);
+                        
                         overlay.addEventListener('click', () => {
                             video.play();
                             overlay.remove();
                         }, { once: true });
                     });
-                });
+                }
+            } else {
+                // No video available, show placeholder
+                videoContainer.style.display = 'none';
+                noVideoPlaceholder.style.display = 'block';
             }
+
+            // Countdown timer
             const countdownElement = document.getElementById('countdown');
             const downloadBtn = document.getElementById('download-btn');
-            let countdown = 10; // seconds
+            let countdown = config.countdownSeconds;
 
-            // When the button is clicked, redirect to the download URL
-            downloadBtn.addEventListener('click', () => {
-                // This will only be clickable when not disabled
-                window.location.href = `/download/{{ filename }}`;
-            });
-
-            let interval;
-            interval = setInterval(() => {
+            const interval = setInterval(() => {
                 countdown--;
                 countdownElement.textContent = countdown;
+                
                 if (countdown <= 0) {
                     clearInterval(interval);
-                    // Enable the button and change its text
                     downloadBtn.removeAttribute('disabled');
                     downloadBtn.textContent = 'Download Now';
                 }
             }, 1000);
+
+            // Handle download button click
+            downloadBtn.addEventListener('click', () => {
+                if (!downloadBtn.disabled) {
+                    window.location.href = config.downloadUrl;
+                }
+            });
         });
     </script>
 </body>
