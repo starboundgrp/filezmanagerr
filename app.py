@@ -7,15 +7,17 @@ def prepare_download(filename):
     except cloudinary.exceptions.NotFound:
         # If Cloudinary says the file doesn't exist, show a 404 error
         abort(404)
+    except Exception as e:
+        print(f"ERROR checking file in Cloudinary: {e}")
+        abort(500)
 
-    # --- Select a random video from Cloudinary ---
+    # --- Select a random video from Cloudinary or use fallback ---
     video_url = None
     try:
-        # Fetch all video files from Cloudinary
+        # Try to fetch video files from Cloudinary
         video_resources = cloudinary.api.resources(
             resource_type="video",
             type="upload",
-            prefix="ads/",  # Optional: organize videos in an 'ads' folder
             max_results=100
         ).get('resources', [])
         
@@ -30,11 +32,16 @@ def prepare_download(filename):
                 resource_type="video",
                 format=random_video.get('format', 'mp4')
             )[0]
-            print(f"DEBUG: Selected video URL: {video_url}")
+            print(f"DEBUG: Selected video: {random_video['public_id']}")
+            print(f"DEBUG: Video URL: {video_url}")
         else:
-            print("Warning: No videos found in Cloudinary")
+            print("INFO: No videos found in Cloudinary - page will show without video")
+    except cloudinary.exceptions.Error as e:
+        print(f"WARNING: Cloudinary API error when fetching videos: {e}")
+        # Continue without video
     except Exception as e:
-        print(f"ERROR: Failed to fetch videos from Cloudinary: {e}")
+        print(f"WARNING: Unexpected error fetching videos: {e}")
+        # Continue without video
     
     return render_template(
         'download_gate.html', 
